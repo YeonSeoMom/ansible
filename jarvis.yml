@@ -1,0 +1,70 @@
+---
+- hosts : centos 
+  become: true
+  become_user: root
+  tasks:
+  - name: Add thr group tomcat
+    group:
+     name: tomcat
+     gid: 500
+     state: present
+    become: true
+    become_user: root
+  - name: Add the user tomcat 
+    user:
+     name: tomcat
+     uid: 500
+     group: tomcat
+    become: true
+    become_user: root
+  - name: create /app dir
+    file: path=/app state=directory
+    become: true
+    become_user: root
+
+  - name: create /app/deploy dir
+    file: path=/app/deploy state=directory owner=tomcat group=tomcat
+    become: true
+    become_user: root
+
+  - name: Install unzip
+    yum: 
+     name: unzip
+     state: present
+
+  - name: Extract jarvis.zip
+    unarchive:
+     src: /tmp/jarvis.zip
+     dest: /app
+     mode: 0777
+     owner: tomcat
+     group: tomcat
+    become: true
+    become_user: root
+
+  # 권한을 tomcat으로 변경 필요, tomcat 계정으로 스크립트 실행해야 함
+  - name: Execute jarvis-glu-agent.sh
+    shell: sh jarvis-glu-agent.sh start
+    args:
+     chdir: /app/jarvis-glu-agent
+     executable: /bin/bash
+
+    become: true
+    become_user: tomcat
+
+  # Creates an entry like "*/5 * * * * /app/jarvis-glu-agent/croncheck_jarvis-glu-agent.sh"
+  - cron:
+     name: "jarvis-glu-agent start"
+     minute: "*/5"
+     job: "/app/jarvis-glu-agent/croncheck_jarvis-glu-agent.sh"
+   
+    become: true
+    become_user: tomcat
+
+  # Creates an entry like "30 4 * * * /usr/sbin/logrotate -s /app/jarvis-glu-agent/logs/logrotate.stat -f /app/jarvis-glu-agent/Jlogrotate.conf 2> /dev/null"
+  - cron:
+     name: "jarvis-glu-agent logrotate"
+     minute: 30
+     hour: 4
+     job: "/usr/sbin/logrotate -s /app/jarvis-glu-agent/logs/logrotate.stat -f /app/jarvis-glu-agent/Jlogrotate.conf 2> /dev/null"
+
