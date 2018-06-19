@@ -2,6 +2,7 @@
 - hosts : centos 
   become: true
   become_user: root
+  gather_facts: no
   tasks:
   - name: Add thr group tomcat
     group:
